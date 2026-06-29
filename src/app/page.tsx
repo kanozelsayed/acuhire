@@ -1,42 +1,130 @@
-import React from 'react';
+"use client";
+
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
+const NAV_SECTION_IDS = ['top', 'about', 'features'] as const;
+
 export default function LandingPage() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>('top');
+  const visibleRatios = useRef<Record<string, number>>({});
+
+  const scrollToSection = (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+    setIsMobileMenuOpen(false);
+  };
+
+  // Scroll-spy: track how much of each section is currently on screen and
+  // keep the underline on whichever one is most visible. This naturally
+  // moves the underline off a section the moment it scrolls out of view,
+  // instead of relying on click state.
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          visibleRatios.current[entry.target.id] = entry.isIntersecting ? entry.intersectionRatio : 0;
+        });
+
+        let mostVisibleId = '';
+        let highestRatio = 0;
+        NAV_SECTION_IDS.forEach((id) => {
+          const ratio = visibleRatios.current[id] || 0;
+          if (ratio > highestRatio) {
+            highestRatio = ratio;
+            mostVisibleId = id;
+          }
+        });
+
+        if (mostVisibleId) {
+          setActiveSection(mostVisibleId);
+        }
+      },
+      {
+        // Account for the sticky header so a section only "counts" once
+        // it's actually visible below it.
+        rootMargin: '-64px 0px 0px 0px',
+        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
+      }
+    );
+
+    NAV_SECTION_IDS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1A1D20] font-sans antialiased flex flex-col justify-between">
+    <div className="min-h-screen bg-[#F8F9FA] text-[#1A1D20] font-sans antialiased flex flex-col justify-between scroll-smooth">
       
       {/* 1. NAVBAR */}
       <header className="w-full bg-white border-b border-slate-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 md:px-12 h-16 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-10">
-            <Link href="/" className="text-xl font-bold tracking-tight text-black">
-              Acuhire
-            </Link>
+            <div className="relative">
+              <a
+                href="#top"
+                onClick={scrollToSection('top')}
+                className="text-xl font-bold tracking-tight text-black"
+              >
+                Acuhire
+              </a>
+              <div
+                className={`absolute -bottom-2 left-0 right-0 h-0.5 bg-indigo-600 rounded-full transition-opacity duration-300 ${
+                  activeSection === 'top' ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            </div>
             
             {/* Nav Links */}
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500">
               <div className="relative py-5">
-                <Link href="#" className="text-indigo-600 font-semibold">
-                  Solutions
-                </Link>
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full" />
+                <a
+                  href="#about"
+                  onClick={scrollToSection('about')}
+                  className={`transition-colors ${
+                    activeSection === 'about' ? 'text-indigo-600 font-semibold' : 'hover:text-slate-900'
+                  }`}
+                >
+                  About
+                </a>
+                <div
+                  className={`absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full transition-opacity duration-300 ${
+                    activeSection === 'about' ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
               </div>
-              <Link href="#" className="hover:text-slate-900 transition-colors">
-                Product
-              </Link>
-              <Link href="#" className="hover:text-slate-900 transition-colors">
-                Pricing
-              </Link>
+              <div className="relative py-5">
+                <a
+                  href="#features"
+                  onClick={scrollToSection('features')}
+                  className={`transition-colors ${
+                    activeSection === 'features' ? 'text-indigo-600 font-semibold' : 'hover:text-slate-900'
+                  }`}
+                >
+                  Features
+                </a>
+                <div
+                  className={`absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full transition-opacity duration-300 ${
+                    activeSection === 'features' ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
+              </div>
             </nav>
           </div>
 
-          {/* Auth Actions */}
-          <div className="flex items-center gap-6">
+          {/* Auth Actions (desktop) */}
+          <div className="hidden md:flex items-center gap-6">
             <Link href="/login" className="text-sm font-semibold text-slate-700 hover:text-black transition-colors">
               Log In
             </Link>
-            {/* LINK 1 FIXED: Points to /register */}
             <Link 
               href="/register" 
               className="bg-black text-white px-4 py-2 rounded text-sm font-medium hover:bg-slate-900 transition-all shadow-sm"
@@ -44,11 +132,58 @@ export default function LandingPage() {
               Sign Up
             </Link>
           </div>
+
+          {/* Hamburger Button (mobile) */}
+          <button
+            type="button"
+            aria-label="Toggle menu"
+            aria-expanded={isMobileMenuOpen}
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            className="md:hidden flex items-center justify-center w-9 h-9 text-slate-700 hover:text-black transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              {isMobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile Menu Panel */}
+        <div
+          className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out border-t border-slate-100 ${
+            isMobileMenuOpen ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <nav className="flex flex-col px-6 py-4 gap-4 text-sm font-medium text-slate-600 bg-white">
+            <a href="#top" onClick={scrollToSection('top')} className={`font-bold transition-colors ${activeSection === 'top' ? 'text-indigo-600' : 'text-black'}`}>
+              Acuhire
+            </a>
+            <a href="#about" onClick={scrollToSection('about')} className={`transition-colors ${activeSection === 'about' ? 'text-indigo-600 font-semibold' : 'hover:text-slate-900'}`}>
+              About
+            </a>
+            <a href="#features" onClick={scrollToSection('features')} className={`transition-colors ${activeSection === 'features' ? 'text-indigo-600 font-semibold' : 'hover:text-slate-900'}`}>
+              Features
+            </a>
+            <div className="h-px bg-slate-100 my-1" />
+            <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="font-semibold text-slate-700 hover:text-black transition-colors">
+              Log In
+            </Link>
+            <Link
+              href="/register"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="bg-black text-white px-4 py-2 rounded text-sm font-medium hover:bg-slate-900 transition-all shadow-sm text-center"
+            >
+              Sign Up
+            </Link>
+          </nav>
         </div>
       </header>
 
       {/* 2. HERO SECTION */}
-      <section className="relative w-full bg-gradient-to-b from-white to-[#F8F9FA] pt-12 pb-20 overflow-hidden">
+      <section id="top" className="relative w-full bg-gradient-to-b from-white to-[#F8F9FA] pt-12 pb-20 overflow-hidden scroll-mt-16">
         <div className="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           
           {/* Hero Left */}
@@ -78,7 +213,6 @@ export default function LandingPage() {
               >
                 Login <span className="text-xs">➔</span>
               </Link>
-              {/* LINK 2 FIXED: Points accurately to /register */}
               <Link 
                 href="/register" 
                 className="bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-50/40 font-semibold text-sm py-3 px-6 rounded flex items-center justify-center shadow-sm transition-all whitespace-nowrap"
@@ -169,7 +303,7 @@ export default function LandingPage() {
       </section>
 
       {/* 3. CORE CONTENT: PRECISION ENGINEERING FOR HR */}
-      <section className="w-full bg-white border-t border-b border-slate-100 py-16">
+      <section id="about" className="w-full bg-white border-t border-b border-slate-100 py-16 scroll-mt-16">
         <div className="max-w-4xl mx-auto px-6 text-center space-y-4">
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-black">
             Precision Engineering for HR
@@ -180,7 +314,7 @@ export default function LandingPage() {
         </div>
 
         {/* 4. FEATURES CARDS GRID */}
-        <div className="max-w-7xl mx-auto px-6 md:px-12 mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div id="features" className="max-w-7xl mx-auto px-6 md:px-12 mt-14 grid grid-cols-1 md:grid-cols-3 gap-6 scroll-mt-20">
           
           {/* Card 1: AI CV Matching */}
           <div className="bg-[#F8F9FA] border border-slate-200/40 rounded-xl p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
@@ -261,8 +395,4 @@ export default function LandingPage() {
 
 
 
-
-
-
-
-/* // اخر حاجه عشان لو عدلت تاني ميفرقعش ف وشي */
+// * // اخر حاجه عشان لو عدلت تاني ميفرقعش ف وشي */
