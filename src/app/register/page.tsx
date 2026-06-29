@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AuthLayout from '@/components/ui/AuthLayout';
 
 type RegisterRole = 'candidate' | 'company';
 
-export default function RegisterPage() {
+// تم تحويل الكود الأساسي إلى مكون داخلي لتغليفه بـ Suspense بنجاح
+function RegisterForm() {
   const searchParams = useSearchParams();
   const [role, setRole] = useState<RegisterRole>('candidate');
 
@@ -287,10 +288,10 @@ export default function RegisterPage() {
             placeholder="••••••••"
             className={`w-full px-3 py-2 bg-white text-slate-900 border text-xs rounded-lg focus:outline-none focus:ring-1 ${
               errors.password ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:border-slate-400'
-            }`}
-          />
+                }`}
+              />
           {errors.password && <p className="text-[10px] text-red-500 mt-1">{errors.password}</p>}
-        </div>
+            </div>
 
         <div>
           <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
@@ -317,6 +318,15 @@ export default function RegisterPage() {
       </form>
     </AuthLayout>
   );
-} 
+}
 
-// اخر حاجه عشان لو عدلت تاني ميفرقعش ف وشي 
+// الـ Export الأساسي للصفحة الآن يتم تغليفه بالـ Suspense بالكامل لحمايته من أي كراش أثناء الـ Build
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="text-center text-xs text-slate-400 p-8">Loading Form...</div>}>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+// اخر حاجه قبل ما ابوش
